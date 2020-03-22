@@ -67,13 +67,23 @@ def run_transformations(customers_filepath: str, products_filepath: str, transac
     # Save transaction_history to output file
     transaction_history.to_csv(output_location+'transaction_history', header=True, index=None)
 
-    return get_latest_transaction_date(transactions_df)
+    return get_latest_transaction_date(transactions_df), get_number_customers(customers_df), get_number_products(products_df)
 
 
 def get_latest_transaction_date(transactions):
     latest_purchase = transactions.date_of_purchase.max()
     latest_transaction = transactions[transactions.date_of_purchase == latest_purchase]
     return latest_transaction
+
+
+def get_number_customers(customer_df):
+    total_customers = customer_df.count()
+    return total_customers[0]
+
+
+def get_number_products(product_df):
+    total_products = product_df.count()
+    return total_products[0]
 
 
 def to_canonical_date_str(date_to_transform):
