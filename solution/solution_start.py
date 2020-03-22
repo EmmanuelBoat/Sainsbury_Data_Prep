@@ -30,10 +30,43 @@ def run_transformations(customers_filepath: str, products_filepath: str, transac
     products_df.columns = ('product_id', 'product_description', 'product_category', 'product_cat')
 
 
+    # Modify transactions_df to 1NF
     transactions_df = read_json_folder(transactions_filepath)
+    transactions_list = []
+    for row in transactions_df.iterrows():
+        for i in row[1][1]:
+            value = row[1][0], i['product_id'], i['price'], row[1][2]
+            transactions_list.append(value)
 
+    # Convert list to dataframe and rename columns
+    transactions_df = pd.DataFrame(transactions_list)
+    transactions_df.columns = ('customer_id', 'product_id', 'price', 'date_of_purchase')
 
-    #print(products_df)
+    #customer_groupby function
+    customer_group = transactions_df.groupby(['customer_id'])
+
+    # Create dataframe from grouping product_id count on customer
+    transaction_history = pd.DataFrame(customer_group['product_id'].value_counts())
+    transactions_list = []
+    for row in transaction_history.iterrows():
+        value = row[0][0], row[0][1], row[1][0]
+        transactions_list.append(value)
+
+    transaction_history = pd.DataFrame(transactions_list)
+    transaction_history.columns = ('customer_id', 'product_id', 'total_purchase')
+
+    # Merge transactions_history with customers_df and products_df
+    transaction_history = pd.merge(transaction_history, customers_df, on='customer_id')
+    transaction_history = pd.merge(transaction_history, products_df, on='product_id')
+
+    # Retrieve relevant rows and sort by customer_id and product_id
+    transaction_history = transaction_history[['customer_id', 'loyalty_score', 'product_id', 'product_cat', 'total_purchase']].sort_values(by=['customer_id', 'product_id'])
+    transaction_history['index'] = range(1, len(transaction_history.index) + 1)
+    transaction_history.set_index('index', inplace = True)
+
+    # Save transaction_history to output file
+    transaction_history.to_csv(output_location+'transaction_history', header=True, index=None)
+
     return get_latest_transaction_date(transactions_df)
 
 
@@ -53,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('--customers_filepath', required=False, default="/Users/emmanuelsifah/Desktop/Git_Projects/input_data_generator/input_data/starter/customers.csv")
     parser.add_argument('--products_filepath', required=False, default="/Users/emmanuelsifah/Desktop/Git_Projects/input_data_generator/input_data/starter/products.csv")
     parser.add_argument('--transactions_filepath', required=False, default="/Users/emmanuelsifah/Desktop/Git_Projects/input_data_generator/input_data/starter/transactions")
-    parser.add_argument('--output_location', required=False, default="./output_data/outputs/")
+    parser.add_argument('--output_location', required=False, default="/Users/emmanuelsifah/Desktop/Git_Projects/input_data_generator/output")
     args = vars(parser.parse_args())
 
     run_transformations(args['customers_filepath'], args['products_filepath'], args['transactions_filepath'], args['output_location'])
